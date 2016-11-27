@@ -1,0 +1,38 @@
+{
+  "name": "stock-simple",
+  "version": "1.0.0",
+  "description": "Stock Simple",
+  "author": "Zeb Fross <zeb@zebfross.com>",
+  "contributors": [
+    {
+      "name": "Zeb Fross",
+      "email": "zeb@zebfross.com"
+    }
+  ],
+  "engines": {
+    "node": "4.5.0"
+  },
+  "scripts": {
+    "start": "node ./bin/www",
+    "test": "mocha"
+  },
+  "main": "./app.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zebfross/stocksimple"
+  },
+  "keywords": [
+    "stock",
+    "finance",
+    "stocksimple"
+  ],
+  "dependencies": {
+    "async": "^2.1.4",
+    "express": "^4.14.0",
+    "request": "^2.79.0"
+  },
+  "devDependencies": {
+    "mocha": "^3.2.0"
+  },
+  "license": "MIT"
+}

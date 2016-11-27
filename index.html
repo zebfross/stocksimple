@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
@@ -39,46 +39,84 @@
 
 		<!-- Collect the nav links, forms, and other content for toggling -->
 		<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-		  <ul class="nav navbar-nav">
+		  <!--<ul class="nav navbar-nav">
 			<li class="active"><a href="#">Link <span class="sr-only">(current)</span></a></li>
-		  </ul>
-		  <form class="navbar-form navbar-left">
+		  </ul>-->
+		  <form class="navbar-form navbar-left" id="formTickerSearch">
 			<div class="form-group">
-			  <input type="text" class="form-control" placeholder="Search">
+			  <input id="tickerInput" type="text" name="ticker" class="form-control" placeholder="Search">
 			</div>
 			<button type="submit" class="btn btn-default">Submit</button>
+              <img id="loadingSpinner" height="25px" width="25px" src="images/loading_spinner.gif" style="display:none;" />
 		  </form>
 		</div><!-- /.navbar-collapse -->
 	  </div><!-- /.container-fluid -->
 	</nav>
-    <div class="row">
-		<div class="col-md-4">
-			<input id="ticker1" data-slider-id='ticker1' type="text" data-slider-min="0" data-slider-max="100" data-slider-step=".5" data-slider-value="68" data-slider-orientation="vertical"/>
-		</div>
-		<div class="col-md-4">
-			<input type="text" id="data-input" />
-		</div>
-		<div class="col-md-4">content</div>
-	</div>
 
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-    <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="js/bootstrap.min.js"></script>
-	<script src="js/bootstrap-slider.min.js"></script>
-	<script type="text/javascript">
-		$(function(){		
-			$('#ticker1').slider({
-				"formatter": function(val) { return "$" + val.toFixed(2); },
-				"reversed": true
-			});
-			var url = "http://localhost:8005/";
-			$.getJSON("http://localhost:8005/lvs", function(data) {
-				//console.log(data.dataset.data[0][1]);
-				console.log(data);
-				//$("#data-input").val(data.name);
-			});
-		});
-	</script>
-  </body>
+      <div class="container-fluid">
+          <div class="row">
+              <div id="errorAlert" class="alert alert-danger" style="display:none;">
+                  <span class="content">There was a problem connecting to the server.  Please try again.</span>
+              </div>
+          </div>
+          <div class="row">
+              <div class="col-md-4">
+                  <div class="panel panel-default">
+                      <div class="panel-body">
+
+                          <table class="table">
+                              <tr>
+                                  <th><label data-bind="text: ticker"></label></th>
+                                  <th></th>
+                                  <th></th>
+                              </tr>
+                              <tr>
+                                  <td rowspan="6">
+                                      <input id="ticker1" data-slider-id='ticker1' type="text" data-slider-min="0" data-slider-max="100" data-slider-step=".5" data-slider-value="6" data-slider-orientation="vertical" />
+                                  </td>
+                                  <td><label>Price/Share: </label></td>
+                                  <td><span data-bind="text: formatCurrency(pricePerShare(), true)"></span></td>
+                              </tr>
+                              <tr>
+                                  <td><label>Total Price: </label></td>
+                                  <td><span data-bind="text: formatCurrency(price())"></span></td>
+                              </tr>
+                              <tr>
+                                  <td><label>Net Income: </label></td>
+                                  <td><span data-bind="text: formatCurrency(netIncome())"></span></td>
+                              </tr>
+                              <tr>
+                                  <td><label>Dividend: </label></td>
+                                  <td><span data-bind="text: formatCurrency(totalDividend())"></span></td>
+                              </tr>
+                              <tr>
+                                  <td><label>ROI: </label></td>
+                                  <td><span data-bind="text: formatPercent(roi(), 2)"></span></td>
+                              </tr>
+                              <tr>
+                                  <td><label>Cash Flow/mo: </label></td>
+                                  <td><span data-bind="text: formatCurrency(monthlyCashFlow())"></span></td>
+                              </tr>
+                          </table>
+                      </div>
+                  </div>
+
+              </div>
+              <div class="col-md-4">
+
+              </div>
+              <div class="col-md-4">
+
+              </div>
+          </div>
+
+        </div>
+        <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+        <!-- Include all compiled plugins (below), or include individual files as needed -->
+        <script src="js/bootstrap.min.js"></script>
+        <script src="js/bootstrap-slider.min.js"></script>
+        <script src="js/knockout.js"></script>
+        <script src="js/index.js"></script>
+</body>
 </html>
