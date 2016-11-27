@@ -29,7 +29,10 @@
   "dependencies": {
     "async": "^2.1.4",
     "express": "^4.14.0",
-    "request": "^2.79.0"
+    "mongodb": "^2.2.11",
+    "request": "^2.79.0",
+    "winston": "^2.3.0",
+    "winston-mongodb": "^1.6.5"
   },
   "devDependencies": {
     "mocha": "^3.2.0"

@@ -30,12 +30,14 @@ describe('App', function () {
     describe('requestPriceAndMetrics', function () {
         this.timeout(5000)
         it('should return data with appropriate properties', function (done) {
-            app.requestPriceAndMetrics("LVS", function (metrics) {
-                assert(metrics != null)
-                assert(metrics.hasOwnProperty("SHARESWA"))
-                assert(metrics.hasOwnProperty("DPS"))
-                assert(metrics.hasOwnProperty("NETINC"))
-                assert(metrics.hasOwnProperty("price"))
+            app.requestPriceAndMetrics("LVS", function (err, metrics) {
+                assert(err == null, "Error should be null")
+                assert(metrics != null, "Metrics should be not null")
+                assert(metrics.hasOwnProperty("SHARESWA"), "Has SHARESWA Property")
+                assert(metrics.hasOwnProperty("DPS"), "Has DPS property")
+                assert(metrics.hasOwnProperty("NETINC"), "Has NETINC property")
+                assert(metrics.hasOwnProperty("price"), "Has price property")
+                assert(metrics["price"] > 0, "price > 0")
                 done()
             })
         })

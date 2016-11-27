@@ -3,21 +3,44 @@ var app = express()
 var request = require('request');
 var async = require('async');
 var tickers = require('./tickers.json');
+var logger = require('./server/logger')
 
 var cache = {}
+var expireCacheInMs = 24*60*60*1000
 var apiKey = "sWULk4ELh-ZE_RQDStSw"
 var baseUrlMetrics = "https://www.quandl.com/api/v3/datasets/SF0/" //AAPL_NETINC_MRY.json?api_key=
 var baseUrlPrices = "https://www.quandl.com/api/v3/datatables/WIKI/PRICES.json?" //ticker=<your_codes>&date=<your_date>&qopts.columns=<your_columns>
 //var metrics = ["NETINC","NETINCCMN","NETINCCMNUSD","SHARESWA","DPS"];
 var metrics = ["NETINC", "SHARESWA", "DPS"];
 
+var timeBetweenRetries = 200;
+var maxRetries = 3
+
+function requestWithRetry(url, cb, retriesLeft) {
+    if (retriesLeft == undefined)
+        retriesLeft = maxRetries
+    request(url, function (error, response, body) {
+        if (response.statusCode != 429) {
+            cb(null, response, body)
+        } else {
+            logger.warn("retrying in " + timeBetweenRetries)
+            setTimeout(function () {
+                requestWithRetry(url, cb, retriesLeft-1)
+            }, timeBetweenRetries)
+        }
+    })
+}
+
 function requestMetric(ticker, metric, cb) {
     var url = baseUrlMetrics + ticker + "_" + metric + "_MRY.json?api_key=" + apiKey
-    request(url, function (error, response, body) {
-      if (!error && response.statusCode == 200) {
-        var data = JSON.parse(body);
-        cb(ticker, metric, data.dataset.data[0][1])
-      }
+    requestWithRetry(url, function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+            var data = JSON.parse(body);
+            cb(null, ticker, metric, data.dataset.data[0][1])
+        } else {
+            logger.error(JSON.stringify(response))
+            cb(error, ticker, metric, null)
+        }
     })
 }
 
@@ -38,34 +61,34 @@ function getUrlForPriceRequest(ticker) {
 
 function requestPrice(ticker, cb) {
     var url = getUrlForPriceRequest(ticker);
-    request(url, function (error, response, body) {
+    requestWithRetry(url, function (error, response, body) {
         if (!error && response.statusCode == 200) {
             var data = JSON.parse(body);
             var prices = data.datatable.data;
-            
-            cb(prices[prices.length - 1][2]);
+
+            cb(null, prices[prices.length - 1][2]);
+        } else {
+            logger.error(JSON.stringify(response))
+            cb(error, 0);
         }
     })
 }
 
 function requestAllMetrics(ticker, cb) {
-    if (cache[ticker])
-        return cb(cache[ticker])
   var metricValues = {};
   async.each(metrics, 
     function(metric, callback) {
-      requestMetric(ticker, metric, function(t, m, val) {
+      requestMetric(ticker, metric, function(e, t, m, val) {
         metricValues[m] = val;
-        callback();
+        callback(e);
       })
     },
     function(err) {
       if(err) {
-        console.log("problem running code async")
+        logger.error("problem running code async")
         return cb(err)
       }
-      cache[ticker] = metricValues
-      return cb(metricValues)
+      return cb(null, metricValues)
     })
 }
 
@@ -101,24 +124,31 @@ function validateTicker(ticker) {
 
 function requestPriceAndMetrics(ticker, cb) {
     if (cache[ticker]) {
-        return cb(cache[ticker])
+        var hasExpired = (new Date().getTime() - cache[ticker].lastDateModified.getTime()) > expireCacheInMs
+        if (!hasExpired) {
+            return cb(null, cache[ticker])
+        }
+        delete cache[ticker]
     }
     async.parallel([
         function (callback) {
-            requestAllMetrics(ticker, function (metrics) {
-                callback(null, metrics);
+            requestAllMetrics(ticker, function (err, metrics) {
+                callback(err, metrics);
             })
         },
         function (callback) {
-            requestPrice(ticker, function (price) {
-                callback(null, price)
+            requestPrice(ticker, function (err, price) {
+                callback(err, price)
             })
         }],
         function (err, results) {
+            if (err) {
+                return cb(err, null)
+            }
             var metrics = results[0];
             metrics.price = results[1];
             cache[ticker] = metrics;
-            cb(metrics);
+            cb(null, metrics);
         })
 }
 
@@ -127,11 +157,20 @@ app.use(express.static(__dirname + '/public'));
 app.get('/api/:ticker', function (req, res) {
     res.append("Access-Control-Allow-Origin", "*");
     if (!validateTicker(req.params.ticker)) {
+        logger.warn("Ticker not valid: " + req.params.ticker)
         res.status(400).send(JSON.stringify({"error": "Ticker symbol does not exist"}));
     } else {
+        logger.profile("perf_get_api_ticker")
         var tickerUpper = req.params.ticker.toUpperCase();
-        requestPriceAndMetrics(tickerUpper, function (metrics) {
+        logger.debug("Search for ticker " + tickerUpper)
+        requestPriceAndMetrics(tickerUpper, function (err, metrics) {
+            if (err) {
+                logger.profile("perf_get_api_ticker")
+                logger.error("Server error for ticker " + tickerUpper, err)
+                return res.status(500).send(JSON.stringify({ "error": err }))
+            }
             var result = { "data": { "ticker": tickerUpper, "metrics": metrics } };
+            logger.profile("perf_get_api_ticker")
             res.send(JSON.stringify(result))
         });
     }

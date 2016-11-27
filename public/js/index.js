@@ -63,7 +63,6 @@ function getQueryParameterByName(name, url) {
 }
 
 var url = "http://localhost:3000";
-var slider;
 
 function calculateShift(value) {
     var shift = 1;
@@ -81,9 +80,8 @@ function populateMetrics(ticker) {
     $.getJSON(url + "/api/" + ticker, function (data) {
         data = data.data;
         var shift = calculateShift(data.metrics.price * data.metrics["SHARESWA"]);
-        slider.slider('setValue', data.metrics.price);
 
-        model.ticker(ticker);
+        model.ticker(data.ticker);
         model.pricePerShare(data.metrics.price);
         model.numShares(data.metrics["SHARESWA"] / shift);
         model.netIncome(data.metrics["NETINC"] / shift);
@@ -98,8 +96,27 @@ function populateMetrics(ticker) {
 }
 
 function StockViewModel() {
+    this.favorited = ko.observable(false);
+    this.pinned = ko.observable(false);
+    this.favorite = function () {
+        this.favorited(true);
+    };
+    this.unfavorite = function () {
+        this.favorited(false);
+    };
+    this.pin = function () {
+        this.pinned(true);
+    };
+    this.unpin = function () {
+        this.pinned(false);
+    };
     this.numShares = ko.observable();
     this.pricePerShare = ko.observable();
+    this.customPricePerShare = ko.observable();
+    this.resetPricePerShare = function () {
+        this.customPricePerShare(this.pricePerShare());
+        this.slider.slider('setValue', this.pricePerShare());
+    }
     this.netIncome = ko.observable();
     this.ticker = ko.observable();
     this.dividend = ko.observable();
@@ -107,14 +124,35 @@ function StockViewModel() {
         return this.dividend() * this.numShares();
     }, this);
     this.price = ko.computed(function () {
-        return this.pricePerShare() * this.numShares();
+        return this.customPricePerShare() * this.numShares();
     }, this);
     this.monthlyCashFlow = ko.computed(function () {
         return this.netIncome() / 12;
     }, this);
+    this.totalIncome = ko.computed(function () {
+        return this.netIncome() + this.totalDividend();
+    }, this);
     this.roi = ko.computed(function () {
         if (this.price() != 0) {
-            return this.netIncome() / this.price();
+            return this.totalIncome() / this.price();
+        }
+        return 0;
+    }, this);
+    this.slider;
+    this.pricePerShare.subscribe(function (newVal) {
+        if (newVal > 0) {
+            this.customPricePerShare(newVal);
+            var sliderModel = this;
+            this.slider = $('#ticker1').slider({
+                "formatter": function (val) { return "$" + val.toFixed(2); },
+                "reversed": true,
+                'min': newVal * .5,
+                'max': newVal * 1.5,
+                'value': newVal
+            }).on("slideStop", function (newVal) {
+                console.log(newVal)
+                sliderModel.customPricePerShare(newVal.value);
+            });
         }
     }, this);
 }
@@ -122,10 +160,6 @@ function StockViewModel() {
 var $;
 if ($ !== undefined) {
     $(function () {
-        slider = $('#ticker1').slider({
-            "formatter": function (val) { return "$" + val.toFixed(2); },
-            "reversed": true
-        });
         var host = window.location.hostname;
         if (host.indexOf(".com") >= 0) {
             url = "http://" + host;

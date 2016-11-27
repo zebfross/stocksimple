@@ -10,11 +10,7 @@
     <!-- Bootstrap -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
 	<link href="css/bootstrap-slider.min.css" rel="stylesheet">
-	<style type="text/css">
-		#ticker1 .slider-selection {
-			background: #BABABA;
-		}
-	</style>
+	<link href="css/index.css" rel="stylesheet" />
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -63,19 +59,40 @@
               <div class="col-md-4">
                   <div class="panel panel-default">
                       <div class="panel-body">
-
                           <table class="table">
                               <tr>
                                   <th><label data-bind="text: ticker"></label></th>
                                   <th></th>
-                                  <th></th>
+                                  <th>
+                                      <span class="pull-right">
+                                          <!-- ko if: pinned() -->
+                                            <span role="button" class="glyphicon glyphicon-remove" data-bind="click:unpin"></span>
+                                          <!-- /ko -->
+                                          <!-- ko if: !pinned() -->
+                                            <span role="button" class="glyphicon glyphicon-pushpin" data-bind="click:pin"></span>
+                                          <!-- /ko -->
+                                          <!-- ko if: favorited() -->
+                                            <span role="button" class="glyphicon glyphicon-star favorite" data-bind="click:unfavorite"></span>
+                                          <!-- /ko -->
+                                          <!-- ko if: !favorited() -->
+                                            <span role="button" class="glyphicon glyphicon-star" data-bind="click:favorite"></span>
+                                          <!-- /ko -->
+                                      </span>
+                                  </th>
                               </tr>
                               <tr>
                                   <td rowspan="6">
-                                      <input id="ticker1" data-slider-id='ticker1' type="text" data-slider-min="0" data-slider-max="100" data-slider-step=".5" data-slider-value="6" data-slider-orientation="vertical" />
+                                      <input id="ticker1" style="display:none;" data-slider-id='slider1' type="text"
+                                             data-slider-step=".5" data-slider-orientation="vertical" />
                                   </td>
                                   <td><label>Price/Share: </label></td>
-                                  <td><span data-bind="text: formatCurrency(pricePerShare(), true)"></span></td>
+                                  <td>
+                                      <span data-bind="text: formatCurrency(pricePerShare(), true)"></span>
+                                      <!-- ko if: pricePerShare() != customPricePerShare() -->
+                                        / <span class="custom-price" data-bind="text: formatCurrency(customPricePerShare(), true)"></span>
+                                        <span class="glyphicon glyphicon-repeat" data-bind="click: resetPricePerShare"></span>
+                                      <!-- /ko -->
+                                  </td>
                               </tr>
                               <tr>
                                   <td><label>Total Price: </label></td>
