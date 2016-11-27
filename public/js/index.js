@@ -78,7 +78,7 @@ function calculateShift(value) {
 function populateMetrics(ticker) {
     loading();
     hideError();
-    $.getJSON(url + "/" + ticker, function (data) {
+    $.getJSON(url + "/api/" + ticker, function (data) {
         data = data.data;
         var shift = calculateShift(data.metrics.price * data.metrics["SHARESWA"]);
         slider.slider('setValue', data.metrics.price);

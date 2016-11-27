@@ -1,6 +1,6 @@
 var assert = require('assert')
 var app = require('../app')
-var client = require('../js/index')
+var client = require('../public/js/index')
 
 var apiKey = "sWULk4ELh-ZE_RQDStSw"
 

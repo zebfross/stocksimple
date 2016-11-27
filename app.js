@@ -122,7 +122,9 @@ function requestPriceAndMetrics(ticker, cb) {
         })
 }
 
-app.get('/:ticker', function (req, res) {
+app.use(express.static(__dirname + '/public'));
+
+app.get('/api/:ticker', function (req, res) {
     res.append("Access-Control-Allow-Origin", "*");
     if (!validateTicker(req.params.ticker)) {
         res.status(400).send(JSON.stringify({"error": "Ticker symbol does not exist"}));
