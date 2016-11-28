@@ -130,6 +130,7 @@ function requestPriceAndMetrics(ticker, cb) {
         }
         delete cache[ticker]
     }
+    logger.profile("perf_get_api_ticker")
     async.parallel([
         function (callback) {
             requestAllMetrics(ticker, function (err, metrics) {
@@ -142,11 +143,13 @@ function requestPriceAndMetrics(ticker, cb) {
             })
         }],
         function (err, results) {
+            logger.profile("perf_get_api_ticker")
             if (err) {
                 return cb(err, null)
             }
             var metrics = results[0];
             metrics.price = results[1];
+            metrics.lastDateModified = new Date();
             cache[ticker] = metrics;
             cb(null, metrics);
         })
@@ -160,17 +163,14 @@ app.get('/api/:ticker', function (req, res) {
         logger.warn("Ticker not valid: " + req.params.ticker)
         res.status(400).send(JSON.stringify({"error": "Ticker symbol does not exist"}));
     } else {
-        logger.profile("perf_get_api_ticker")
         var tickerUpper = req.params.ticker.toUpperCase();
         logger.debug("Search for ticker " + tickerUpper)
         requestPriceAndMetrics(tickerUpper, function (err, metrics) {
             if (err) {
-                logger.profile("perf_get_api_ticker")
                 logger.error("Server error for ticker " + tickerUpper, err)
                 return res.status(500).send(JSON.stringify({ "error": err }))
             }
             var result = { "data": { "ticker": tickerUpper, "metrics": metrics } };
-            logger.profile("perf_get_api_ticker")
             res.send(JSON.stringify(result))
         });
     }

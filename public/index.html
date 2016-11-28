@@ -40,9 +40,9 @@
 		  </ul>-->
 		  <form class="navbar-form navbar-left" id="formTickerSearch">
 			<div class="form-group">
-			  <input id="tickerInput" type="text" name="ticker" class="form-control" placeholder="Search">
+			  <input id="tickerInput" type="text" name="ticker" class="form-control" placeholder="Ex. MSFT">
 			</div>
-			<button type="submit" class="btn btn-default">Submit</button>
+			<button type="submit" class="btn btn-default"><span class="glyphicon glyphicon-search"></span> Search</button>
               <img id="loadingSpinner" height="25px" width="25px" src="images/loading_spinner.gif" style="display:none;" />
 		  </form>
 		</div><!-- /.navbar-collapse -->
@@ -56,78 +56,86 @@
               </div>
           </div>
           <div class="row">
-              <div class="col-md-4">
-                  <div class="panel panel-default">
-                      <div class="panel-body">
-                          <table class="table">
-                              <tr>
-                                  <th><label data-bind="text: ticker"></label></th>
-                                  <th></th>
-                                  <th>
-                                      <span class="pull-right">
-                                          <!-- ko if: pinned() -->
-                                            <span role="button" class="glyphicon glyphicon-remove" data-bind="click:unpin"></span>
-                                          <!-- /ko -->
-                                          <!-- ko if: !pinned() -->
-                                            <span role="button" class="glyphicon glyphicon-pushpin" data-bind="click:pin"></span>
-                                          <!-- /ko -->
-                                          <!-- ko if: favorited() -->
-                                            <span role="button" class="glyphicon glyphicon-star favorite" data-bind="click:unfavorite"></span>
-                                          <!-- /ko -->
-                                          <!-- ko if: !favorited() -->
-                                            <span role="button" class="glyphicon glyphicon-star" data-bind="click:favorite"></span>
-                                          <!-- /ko -->
-                                      </span>
-                                  </th>
-                              </tr>
-                              <tr>
-                                  <td rowspan="6">
-                                      <input id="ticker1" style="display:none;" data-slider-id='slider1' type="text"
-                                             data-slider-step=".5" data-slider-orientation="vertical" />
-                                  </td>
-                                  <td><label>Price/Share: </label></td>
-                                  <td>
-                                      <span data-bind="text: formatCurrency(pricePerShare(), true)"></span>
-                                      <!-- ko if: pricePerShare() != customPricePerShare() -->
-                                        / <span class="custom-price" data-bind="text: formatCurrency(customPricePerShare(), true)"></span>
-                                        <span class="glyphicon glyphicon-repeat" data-bind="click: resetPricePerShare"></span>
-                                      <!-- /ko -->
-                                  </td>
-                              </tr>
-                              <tr>
-                                  <td><label>Total Price: </label></td>
-                                  <td><span data-bind="text: formatCurrency(price())"></span></td>
-                              </tr>
-                              <tr>
-                                  <td><label>Net Income: </label></td>
-                                  <td><span data-bind="text: formatCurrency(netIncome())"></span></td>
-                              </tr>
-                              <tr>
-                                  <td><label>Dividend: </label></td>
-                                  <td><span data-bind="text: formatCurrency(totalDividend())"></span></td>
-                              </tr>
-                              <tr>
-                                  <td><label>ROI: </label></td>
-                                  <td><span data-bind="text: formatPercent(roi(), 2)"></span></td>
-                              </tr>
-                              <tr>
-                                  <td><label>Cash Flow/mo: </label></td>
-                                  <td><span data-bind="text: formatCurrency(monthlyCashFlow())"></span></td>
-                              </tr>
-                          </table>
-                      </div>
+              <!-- ko if: isEmpty() -->
+                    <div id="emptyAlert" class="alert alert-info">
+                        <span class="content">Try searching for a ticker.</span>
+                    </div>
+              <!-- /ko -->
+              <!-- ko if: searchResult() != null, afterRender: initSlider -->
+                  <div class="col-md-4" data-bind="template: { name: 'stock-template', data: searchResult(), afterRender: initSlider }">
+
                   </div>
+              <!-- /ko -->
+              <!-- ko foreach: stocks -->
+                  <div class="col-md-4" data-bind="template: { name: 'stock-template', data: $data, afterRender: initSlider }">
 
-              </div>
-              <div class="col-md-4">
-
-              </div>
-              <div class="col-md-4">
-
-              </div>
-          </div>
+                  </div>
+              <!-- /ko -->
+          </div>          
 
         </div>
+        <script type="text/html" id="stock-template">
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <table class="table">
+                        <tr>
+                            <th><label data-bind="text: ticker"></label></th>
+                            <th></th>
+                            <th>
+                                <span class="pull-right">
+                                    <!-- ko if: pinned() -->
+                                    <span role="button" class="glyphicon glyphicon-remove" data-bind="click:unpin"></span>
+                                    <!-- /ko -->
+                                    <!-- ko if: !pinned() -->
+                                    <span role="button" class="glyphicon glyphicon-pushpin" data-bind="click:pin"></span>
+                                    <!-- /ko -->
+                                    <!-- ko if: favorited() -->
+                                    <span role="button" class="glyphicon glyphicon-star favorite" data-bind="click:unfavorite"></span>
+                                    <!-- /ko -->
+                                    <!-- ko if: !favorited() -->
+                                    <span role="button" class="glyphicon glyphicon-star" data-bind="click:favorite"></span>
+                                    <!-- /ko -->
+                                </span>
+                            </th>
+                        </tr>
+                        <tr>
+                            <td rowspan="6">
+                                <input data-bind="attr:{id:'ticker'+ticker()}, event: {onLoad: initSlider }" style="display:none;" type="text"
+                                       data-slider-step=".5" data-slider-orientation="vertical" />
+                            </td>
+                            <td><label>Price/Share: </label></td>
+                            <td>
+                                <span data-bind="text: formatCurrency(pricePerShare(), true)"></span>
+                                <!-- ko if: pricePerShare() != customPricePerShare() -->
+                                / <span class="custom-price" data-bind="text: formatCurrency(customPricePerShare(), true)"></span>
+                                <span role="button" class="glyphicon glyphicon-repeat" data-bind="click: resetPricePerShare"></span>
+                                <!-- /ko -->
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><label>Total Price: </label></td>
+                            <td><span data-bind="text: formatCurrency(price())"></span></td>
+                        </tr>
+                        <tr>
+                            <td><label>Net Income: </label></td>
+                            <td><span data-bind="text: formatCurrency(netIncome())"></span></td>
+                        </tr>
+                        <tr>
+                            <td><label>Dividend: </label></td>
+                            <td><span data-bind="text: formatCurrency(totalDividend())"></span></td>
+                        </tr>
+                        <tr>
+                            <td><label>ROI: </label></td>
+                            <td><span data-bind="text: formatPercent(roi(), 2)"></span></td>
+                        </tr>
+                        <tr>
+                            <td><label>Cash Flow/mo: </label></td>
+                            <td><span data-bind="text: formatCurrency(monthlyCashFlow())"></span></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </script>
         <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
         <!-- Include all compiled plugins (below), or include individual files as needed -->

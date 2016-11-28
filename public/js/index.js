@@ -1,4 +1,4 @@
-var model;
+var model, ko;
 function addCommas(nStr) {
     nStr += '';
     x = nStr.split('.');
@@ -80,13 +80,13 @@ function populateMetrics(ticker) {
     $.getJSON(url + "/api/" + ticker, function (data) {
         data = data.data;
         var shift = calculateShift(data.metrics.price * data.metrics["SHARESWA"]);
-
-        model.ticker(data.ticker);
-        model.pricePerShare(data.metrics.price);
-        model.numShares(data.metrics["SHARESWA"] / shift);
-        model.netIncome(data.metrics["NETINC"] / shift);
-        model.dividend(data.metrics["DPS"]);
-
+        var newStock = new StockViewModel(model);
+        newStock.ticker(data.ticker);
+        newStock.pricePerShare(data.metrics.price);
+        newStock.numShares(data.metrics["SHARESWA"] / shift);
+        newStock.netIncome(data.metrics["NETINC"] / shift);
+        newStock.dividend(data.metrics["DPS"]);
+        model.searchResult(newStock);
         unloading();
 
     }).fail(function () {
@@ -95,7 +95,11 @@ function populateMetrics(ticker) {
     });
 }
 
-function StockViewModel() {
+function StockViewModel(parent, _ko) {
+    if (ko == undefined)
+        ko = _ko;
+    var self = this;
+    var container = parent;
     this.favorited = ko.observable(false);
     this.pinned = ko.observable(false);
     this.favorite = function () {
@@ -106,9 +110,13 @@ function StockViewModel() {
     };
     this.pin = function () {
         this.pinned(true);
+        if (container.searchResult() != null && container.searchResult().ticker() == this.ticker())
+            container.searchResult(null);
+        container.addStock(this);
     };
     this.unpin = function () {
         this.pinned(false);
+        container.removeStock(this.ticker());        
     };
     this.numShares = ko.observable();
     this.pricePerShare = ko.observable();
@@ -138,24 +146,74 @@ function StockViewModel() {
         }
         return 0;
     }, this);
-    this.slider;
+    this.slider = {};
     this.pricePerShare.subscribe(function (newVal) {
         if (newVal > 0) {
             this.customPricePerShare(newVal);
-            var sliderModel = this;
-            this.slider = $('#ticker1').slider({
-                "formatter": function (val) { return "$" + val.toFixed(2); },
-                "reversed": true,
-                'min': newVal * .5,
-                'max': newVal * 1.5,
-                'value': newVal
-            }).on("slideStop", function (newVal) {
-                console.log(newVal)
-                sliderModel.customPricePerShare(newVal.value);
-            });
         }
     }, this);
+    this.initSlider = function () {
+        this.slider = $('#ticker' + self.ticker()).slider({
+            "id": "slider"+ self.ticker(),
+            "formatter": function (val) { return "$" + val.toFixed(2); },
+            "reversed": true,
+            'min': self.pricePerShare() * .5,
+            'max': self.pricePerShare() * 1.5,
+            'value': self.pricePerShare()
+        }).on("slideStop", function (newVal) {
+            self.customPricePerShare(newVal.value);
+        });
+    };
 }
+
+var StockListViewModel = function (_ko) {
+    if (ko == undefined)
+        ko = _ko;
+    this.searchResult = ko.observable(null);
+    this.currentSelection = ko.observable(-1);
+    this.stocks = ko.observableArray([]);
+    this.isEmpty = ko.computed(function () {
+        if (this.searchResult() == null && this.stocks().length == 0) {
+            return true;
+        }
+        return false;
+    }, this);
+    this.indexOfTicker = function (ticker) {
+        for (var i = 0; i < this.stocks().length; ++i) {
+            if (ticker.toUpperCase() == this.stocks()[i].ticker()) {
+                return i;
+            }
+        }
+        return -1;
+    };
+    this.hasTicker = function (ticker) {
+        var tickerUpper = ticker.toUpperCase();
+        if (this.searchResult() != null && tickerUpper == this.searchResult().ticker())
+            return true;
+        if (this.indexOfTicker(tickerUpper) >= 0)
+            return true;
+        return false;
+    };
+    this.addStock = function (stock) {
+        if (this.indexOfTicker(stock.ticker()) < 0) {
+            this.stocks.splice(0, 0, stock);
+        }
+    };
+    this.removeStock = function (ticker) {
+        var index = this.indexOfTicker(ticker);
+        if (index >= 0) {
+            this.stocks.splice(index, 1);
+        }
+    };
+    this.initSlider = function () {
+        if (model.searchResult() != null) {
+            model.searchResult().initSlider();
+        }
+        for (var i = 0; i < model.stocks().length; ++i) {
+            model.stocks()[i].initSlider();
+        }
+    };
+};
 
 var $;
 if ($ !== undefined) {
@@ -164,11 +222,14 @@ if ($ !== undefined) {
         if (host.indexOf(".com") >= 0) {
             url = "http://" + host;
         }
-        model = new StockViewModel();
+        model = new StockListViewModel();
         ko.applyBindings(model);
 
         $("#formTickerSearch").submit(function (event) {
-            populateMetrics($("#tickerInput").val());
+            var ticker = $("#tickerInput").val();
+            if (!model.hasTicker(ticker)) {
+                populateMetrics(ticker);
+            }
             $("#tickerInput").val("");
             return false;
         });
@@ -181,7 +242,9 @@ if (module) {
         calculateShift: calculateShift,
         getQueryParameterByName: getQueryParameterByName,
         formatCurrency: formatCurrency,
-        formatNumber: formatNumber
+        formatNumber: formatNumber,
+        StockListViewModel: StockListViewModel,
+        StockViewModel: StockViewModel
     };
     module.exports = functionsToExport;
 }
