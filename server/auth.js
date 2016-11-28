@@ -1,12 +1,20 @@
 var passport = require('passport');
 var GoogleStrategy = require('passport-google-oauth20').Strategy;
 
-var User = function () {
+var User = {
     //TODO: Implement User database
-    this.findOrCreate = function (usr, callback) {
+    findOrCreate: function (usr, callback) {
         return callback(null, usr)
     }
 }
+
+passport.serializeUser(function (user, done) {
+    done(null, JSON.stringify(user));
+});
+
+passport.deserializeUser(function (user, done) {
+    done(null, JSON.parse(user));
+});
 
 // Use the GoogleStrategy within Passport.
 //   Strategies in passport require a `verify` function, which accept
@@ -19,7 +27,7 @@ passport.use(new GoogleStrategy({
 },
     function (accessToken, refreshToken, profile, cb) {
         User.findOrCreate({ googleId: profile.id }, function (err, user) {
-            return done(err, user);
+            return cb(err, user);
         });
     }
 ));

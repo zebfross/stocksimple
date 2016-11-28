@@ -157,6 +157,7 @@ function requestPriceAndMetrics(ticker, cb) {
 }
 
 app.use(express.static(__dirname + '/public'));
+app.use(passport.initialize());
 
 app.get('/auth/google',
     passport.authenticate('google', { scope: 'profile' }));
