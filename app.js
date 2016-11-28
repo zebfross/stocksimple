@@ -4,6 +4,7 @@ var request = require('request');
 var async = require('async');
 var tickers = require('./tickers.json');
 var logger = require('./server/logger')
+var passport = require('./server/auth');
 
 var cache = {}
 var expireCacheInMs = 24*60*60*1000
@@ -156,6 +157,15 @@ function requestPriceAndMetrics(ticker, cb) {
 }
 
 app.use(express.static(__dirname + '/public'));
+
+app.get('/auth/google',
+    passport.authenticate('google', { scope: 'profile' }));
+
+app.get('/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login.html' }),
+    function (req, res) {
+        res.redirect('/');
+    });
 
 app.get('/api/:ticker', function (req, res) {
     res.append("Access-Control-Allow-Origin", "*");
