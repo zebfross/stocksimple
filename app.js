@@ -1,10 +1,13 @@
 var express = require('express')
+var session = require('express-session')
 var app = express()
 var request = require('request');
 var async = require('async');
 var tickers = require('./tickers.json');
 var logger = require('./server/logger')
 var passport = require('./server/auth');
+var Model = require('./server/model')
+var mustacheExpress = require('mustache-express');
 
 var cache = {}
 var expireCacheInMs = 24*60*60*1000
@@ -157,19 +160,41 @@ function requestPriceAndMetrics(ticker, cb) {
 }
 
 app.use(express.static(__dirname + '/public'));
+app.use(session({
+    secret: 'Some Super Secret',
+    resave: false,
+    saveUninitialized: false
+}));
 app.use(passport.initialize());
+app.use(passport.session());
+
+app.engine('mustache', mustacheExpress());
+app.set('view engine', 'mustache')
+app.set('views', './views')
+
+app.get('/', function (req, res) {
+    res.render('index.mustache', { user: req.user })
+})
 
 app.get('/auth/google',
     passport.authenticate('google', { scope: 'profile' }));
 
 app.get('/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login.html' }),
+    passport.authenticate('google', { failureRedirect: '/' }),
+    function (req, res) {
+        res.redirect('/');
+    });
+
+app.get('/auth/facebook',
+    passport.authenticate('facebook'));
+
+app.get('/auth/facebook/callback',
+    passport.authenticate('facebook', { failureRedirect: '/' }),
     function (req, res) {
         res.redirect('/');
     });
 
 app.get('/api/:ticker', function (req, res) {
-    res.append("Access-Control-Allow-Origin", "*");
     if (!validateTicker(req.params.ticker)) {
         logger.warn("Ticker not valid: " + req.params.ticker)
         res.status(400).send(JSON.stringify({"error": "Ticker symbol does not exist"}));
@@ -184,6 +209,30 @@ app.get('/api/:ticker', function (req, res) {
             var result = { "data": { "ticker": tickerUpper, "metrics": metrics } };
             res.send(JSON.stringify(result))
         });
+    }
+})
+
+app.get('/api/users/:id', function (req, res) {
+    Model.User.findOne({ identifier: req.params.identifier }, function (err, usr) {
+        res.send(JSON.stringify(usr))
+    })
+})
+
+app.put('/api/favorite/:ticker', function (req, res) {
+    if (!req.user) {
+        return res.status(401).send("Unauthorized")
+    } else {
+        req.user.addFavorite(req.params.ticker)
+        res.send("OK")
+    }
+})
+
+app.put('/api/unfavorite/:ticker', function (req, res) {
+    if (!req.user) {
+        return res.status(401).send("Unauthorized")
+    } else {
+        req.user.removeFavorite(req.params.ticker)
+        res.send("OK")
     }
 })
 

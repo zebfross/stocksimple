@@ -9,3 +9,23 @@
 .custom-price {
     color: blue;
 }
+
+.btn-google, .btn-google:hover {
+    color: white;
+    background-color: #e0492f;
+    border-color: #e0492f;
+}
+
+.btn-facebook, .btn-facebook:hover {
+    color: white;
+    background-color: #395697;
+    border-color: #395697;
+}
+
+.glyphicon-google {
+    background-image: url('/images/glyphicons-social-google-plus.png')
+}
+
+.glyphicon-facebook {
+    background-image: url('/images/glyphicons-social-facebook.png');
+}

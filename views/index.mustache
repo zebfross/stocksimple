@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Bootstrap 101 Template</title>
+
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap-slider.min.css" rel="stylesheet">
+    <link href="css/index.css" rel="stylesheet" />
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body>
+    <nav class="navbar navbar-default">
+        <div class="container-fluid">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">{{title}}</a>
+                <form class="navbar-form navbar-left" id="formTickerSearch">
+                    <div class="form-group form-horizontal">
+                        <input id="tickerInput" type="text" name="ticker" class="form-control" placeholder="Ex. MSFT">
+                        <button type="submit" class="btn btn-default"><span class="glyphicon glyphicon-search"></span> Search</button>
+                    </div>
+                    <img id="loadingSpinner" height="25px" width="25px" src="images/loading_spinner.gif" style="display:none;" />
+                </form>
+            </div>
+
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse pull-right" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                    <li class="">
+                        <!-- ko if: isUserLoggedIn() -->
+                        <span>Welcome, <span data-bind="text: user().displayName"></span></span>
+                        <!-- /ko -->
+                        <!-- ko if: !isUserLoggedIn() -->
+                        <a href="#" data-toggle="modal" data-target="#loginModal">
+                            Sign-up/Login
+                        </a>
+                        <!-- /ko -->
+                    </li>
+                </ul>
+            </div><!-- /.navbar-collapse -->
+        </div><!-- /.container-fluid -->
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div id="errorAlert" class="alert alert-danger" style="display:none;">
+                <span class="content">There was a problem connecting to the server.  Please try again.</span>
+            </div>
+        </div>
+        <div class="row">
+            <!-- ko if: isEmpty() -->
+            <div id="emptyAlert" class="alert alert-info">
+                <span class="content">Try searching for a ticker.</span>
+            </div>
+            <!-- /ko -->
+            <!-- ko if: searchResult() != null, afterRender: initSlider -->
+            <div class="col-md-4" data-bind="template: { name: 'stock-template', data: searchResult(), afterRender: initSlider }">
+
+            </div>
+            <!-- /ko -->
+            <!-- ko foreach: stocks -->
+            <div class="col-md-4" data-bind="template: { name: 'stock-template', data: $data, afterRender: initSlider }">
+
+            </div>
+            <!-- /ko -->
+        </div>
+
+    </div>
+    <div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">Login</h4>
+                </div>
+                <div class="modal-body">
+                    <div style="text-align:center;">
+                        <a role="button" class="btn btn-google" href="/auth/google">
+                            <img src="/images/glyphicons-social-google-plus.png" height="25" width="25" /> Google
+                        </a>
+                        <a role="button" class="btn btn-facebook" href="/auth/facebook">
+                            <img src="/images/glyphicons-social-facebook.png" height="25" width="25"> Facebook
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <!--<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">Save changes</button>-->
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/html" id="stock-template">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <table class="table">
+                    <tr>
+                        <th><label data-bind="text: ticker"></label></th>
+                        <th><a target="_blank" class="small" data-bind="attr: {href:'http://www.msn.com/en-us/money/stockdetails/?symbol='+ticker()}">more <span class="glyphicon glyphicon-new-window"></span></a></th>
+                        <th>
+                            <span class="pull-right">
+                                <!-- ko if: pinned() -->
+                                <span role="button" class="glyphicon glyphicon-remove" data-bind="click:unpin"></span>
+                                <!-- /ko -->
+                                <!-- ko if: !pinned() -->
+                                <span role="button" class="glyphicon glyphicon-pushpin" data-bind="click:pin"></span>
+                                <!-- /ko -->
+                                <!-- ko if: favorited() -->
+                                <span role="button" class="glyphicon glyphicon-star favorite" data-bind="click:unfavorite"></span>
+                                <!-- /ko -->
+                                <!-- ko if: !favorited() -->
+                                <span role="button" class="glyphicon glyphicon-star" data-bind="click:favorite"></span>
+                                <!-- /ko -->
+                            </span>
+                        </th>
+                    </tr>
+                    <tr>
+                        <td rowspan="6">
+                            <input data-bind="attr:{id:'ticker'+ticker()}, event: {onLoad: initSlider }" style="display:none;" type="text"
+                                   data-slider-step=".5" data-slider-orientation="vertical" />
+                        </td>
+                        <td><label>Price/Share: </label></td>
+                        <td>
+                            <span data-bind="text: formatCurrency(pricePerShare(), true)"></span>
+                            <!-- ko if: pricePerShare() != customPricePerShare() -->
+                            / <span class="custom-price" data-bind="text: formatCurrency(customPricePerShare(), true)"></span>
+                            <span role="button" class="glyphicon glyphicon-repeat" data-bind="click: resetPricePerShare"></span>
+                            <!-- /ko -->
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><label>Total Price: </label></td>
+                        <td><span data-bind="text: formatCurrency(price())"></span></td>
+                    </tr>
+                    <tr>
+                        <td><label>Net Income: </label></td>
+                        <td><span data-bind="text: formatCurrency(netIncome())"></span></td>
+                    </tr>
+                    <tr>
+                        <td><label>Dividend: </label></td>
+                        <td><span data-bind="text: formatCurrency(totalDividend())"></span></td>
+                    </tr>
+                    <tr>
+                        <td><label>ROI: </label></td>
+                        <td><span data-bind="text: formatPercent(roi(), 2)"></span></td>
+                    </tr>
+                    <tr>
+                        <td><label>Cash Flow/mo: </label></td>
+                        <td><span data-bind="text: formatCurrency(monthlyCashFlow())"></span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </script>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/bootstrap-slider.min.js"></script>
+    <script src="js/knockout.js"></script>
+    <script src="js/index.js"></script>
+    <script type="text/javascript">
+        $(function() {
+            {{#user}}
+                model.user({
+                    "id": "{{user.id}}",
+                    "displayName": "{{user.displayName}}",
+                    "provider": "{{user.provider}}",
+                    "favorites": [{{#user.favorites}}"{{.}}",{{/user.favorites}}]
+                });
+            {{/user}}
+        });
+    </script>
+</body>
+</html>

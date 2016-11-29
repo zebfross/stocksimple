@@ -1,19 +1,17 @@
 var passport = require('passport');
 var GoogleStrategy = require('passport-google-oauth20').Strategy;
-
-var User = {
-    //TODO: Implement User database
-    findOrCreate: function (usr, callback) {
-        return callback(null, usr)
-    }
-}
+var FacebookStrategy = require('passport-facebook').Strategy;
+var config = require('../config/config')()
+var User = require('./model').User
 
 passport.serializeUser(function (user, done) {
-    done(null, JSON.stringify(user));
+    done(null, user.id);
 });
 
 passport.deserializeUser(function (user, done) {
-    done(null, JSON.parse(user));
+    User.findOne({ id: user }, function (err, result) {
+        done(null, result);
+    })
 });
 
 // Use the GoogleStrategy within Passport.
@@ -23,10 +21,22 @@ passport.deserializeUser(function (user, done) {
 passport.use(new GoogleStrategy({
     clientID: process.env.Google_Client_Id,
     clientSecret: process.env.Google_Client_Secret,
-    callbackURL: "http://localhost:3000/auth/google/callback"
+    callbackURL: config.host + "/auth/google/callback"
 },
     function (accessToken, refreshToken, profile, cb) {
-        User.findOrCreate({ googleId: profile.id }, function (err, user) {
+        User.findOrCreate(profile, function (err, user) {
+            return cb(err, user);
+        });
+    }
+));
+
+passport.use(new FacebookStrategy({
+    clientID: process.env.Facebook_Client_Id,
+    clientSecret: process.env.Facebook_Client_Secret,
+    callbackURL: config.host + "/auth/facebook/callback"
+},
+    function (accessToken, refreshToken, profile, cb) {
+        User.findOrCreate(profile, function (err, user) {
             return cb(err, user);
         });
     }

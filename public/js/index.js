@@ -34,12 +34,16 @@ function formatPercent(num, numDecimals) {
     return num.toFixed(numDecimals) + "%";
 }
 
+var loadingStack = 0;
 function loading() {
+    loadingStack++;
     $("#loadingSpinner").show();
 }
 
 function unloading() {
-    $("#loadingSpinner").hide();
+    loadingStack--;
+    if(loadingStack == 0)
+        $("#loadingSpinner").hide();
 }
 
 function showError() {
@@ -64,6 +68,31 @@ function getQueryParameterByName(name, url) {
 
 var url = "http://localhost:3000";
 
+function Server() {
+    this.apiRoot = "/api/";
+    this.getMetricsForTicker = function (ticker, callback) {
+        $.getJSON(url + this.apiRoot + ticker, function (data) {
+            callback(null, data.data);
+        }).fail(function () {
+            callback({ message: "Server error" });
+        });
+    };
+    this.favorite = function (ticker) {
+        $.ajax({
+            url: url + this.apiRoot + "favorite/" + ticker,
+            method: "PUT"
+        });
+    };
+    this.unfavorite = function (ticker) {
+        $.ajax({
+            url: url + this.apiRoot + "unfavorite/" + ticker,
+            method: "PUT"
+        });
+    };
+}
+
+var server = new Server();
+
 function calculateShift(value) {
     var shift = 1;
     var halfMillion = 500000;
@@ -74,24 +103,28 @@ function calculateShift(value) {
     return shift;
 }
 
-function populateMetrics(ticker) {
+function populateMetrics(ticker, callback) {
     loading();
     hideError();
-    $.getJSON(url + "/api/" + ticker, function (data) {
-        data = data.data;
-        var shift = calculateShift(data.metrics.price * data.metrics["SHARESWA"]);
-        var newStock = new StockViewModel(model);
-        newStock.ticker(data.ticker);
-        newStock.pricePerShare(data.metrics.price);
-        newStock.numShares(data.metrics["SHARESWA"] / shift);
-        newStock.netIncome(data.metrics["NETINC"] / shift);
-        newStock.dividend(data.metrics["DPS"]);
-        model.searchResult(newStock);
-        unloading();
-
-    }).fail(function () {
-        showError();
-        unloading();
+    server.getMetricsForTicker(ticker, function (err, data) {
+        if (err == undefined) {
+            var shift = calculateShift(data.metrics.price * data.metrics["SHARESWA"]);
+            var newStock = new StockViewModel(model);
+            newStock.ticker(data.ticker);
+            newStock.pricePerShare(data.metrics.price);
+            newStock.numShares(data.metrics["SHARESWA"] / shift);
+            newStock.netIncome(data.metrics["NETINC"] / shift);
+            newStock.dividend(data.metrics["DPS"]);
+            newStock.pin();
+            unloading();
+            if(callback)
+                callback(null, newStock);
+        } else {
+            showError();
+            unloading();
+            if(callback)
+                callback(err);
+        }
     });
 }
 
@@ -104,9 +137,13 @@ function StockViewModel(parent, _ko) {
     this.pinned = ko.observable(false);
     this.favorite = function () {
         this.favorited(true);
+        server.favorite(self.ticker());
+        parent.favorite(self.ticker());
     };
     this.unfavorite = function () {
         this.favorited(false);
+        server.unfavorite(self.ticker());
+        parent.favorite(self.ticker());
     };
     this.pin = function () {
         this.pinned(true);
@@ -169,6 +206,33 @@ function StockViewModel(parent, _ko) {
 var StockListViewModel = function (_ko) {
     if (ko == undefined)
         ko = _ko;
+    this.user = ko.observable(null);
+    this.user.subscribe(function (newVal) {
+        if (newVal && newVal.favorites) {
+            // load favorites
+            for (var i = 0; i < newVal.favorites.length; ++i) {
+                populateMetrics(newVal.favorites[i], function(err, newStock) {
+                    if(newStock) {
+                        newStock.favorited(true);
+                    }
+                });
+            }
+        }
+    });
+    this.isUserLoggedIn = function () {
+        if (this.user() == undefined || this.user().id == undefined) {
+            return false
+        }
+        return true
+    };
+    this.favorite = function (ticker) {
+        this.user().favorites.push(ticker);
+    };
+    this.unfavorite = function (ticker) {
+        var index = this.user().favorites.indexOf(ticker);
+        if (index >= 0)
+            this.user().favorites.splice(index, 1);
+    };
     this.searchResult = ko.observable(null);
     this.currentSelection = ko.observable(-1);
     this.stocks = ko.observableArray([]);
