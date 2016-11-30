@@ -108,13 +108,13 @@ function populateMetrics(ticker, callback) {
     hideError();
     server.getMetricsForTicker(ticker, function (err, data) {
         if (err == undefined) {
-            var shift = calculateShift(data.metrics.price * data.metrics["SHARESWA"]);
+            var shift = calculateShift(data.price * data["SHARESWA"]);
             var newStock = new StockViewModel(model);
             newStock.ticker(data.ticker);
-            newStock.pricePerShare(data.metrics.price);
-            newStock.numShares(data.metrics["SHARESWA"] / shift);
-            newStock.netIncome(data.metrics["NETINC"] / shift);
-            newStock.dividend(data.metrics["DPS"]);
+            newStock.pricePerShare(data.price);
+            newStock.numShares(data["SHARESWA"] / shift);
+            newStock.netIncome(data["NETINC"] / shift);
+            newStock.dividend(data["DPS"]);
             newStock.pin();
             unloading();
             if(callback)
@@ -160,7 +160,7 @@ function StockViewModel(parent, _ko) {
     this.customPricePerShare = ko.observable();
     this.resetPricePerShare = function () {
         this.customPricePerShare(this.pricePerShare());
-        this.slider.slider('setValue', this.pricePerShare());
+        self.slider.slider('setValue', this.pricePerShare());
     }
     this.netIncome = ko.observable();
     this.ticker = ko.observable();
@@ -190,7 +190,7 @@ function StockViewModel(parent, _ko) {
         }
     }, this);
     this.initSlider = function () {
-        this.slider = $('#ticker' + self.ticker()).slider({
+        self.slider = $('#ticker' + self.ticker()).slider({
             "id": "slider"+ self.ticker(),
             "formatter": function (val) { return "$" + val.toFixed(2); },
             "reversed": true,

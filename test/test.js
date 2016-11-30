@@ -3,7 +3,7 @@ var app = require('../app')
 var client = require('../public/js/index')
 var async = require('async')
 
-var apiKey = "sWULk4ELh-ZE_RQDStSw"
+var apiKey = process.env.Quandl_Api_Key
 
 function pad(n, width, z) {
     z = z || '0';

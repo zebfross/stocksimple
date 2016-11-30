@@ -29,8 +29,10 @@
   "dependencies": {
     "async": "^2.1.4",
     "bluebird": "^3.4.6",
+    "cookie-parser": "^1.4.3",
     "express": "^4.14.0",
     "express-session": "^1.14.2",
+    "hat": "0.0.3",
     "mongodb": "^2.2.11",
     "mongoose": "^4.7.0",
     "mustache": "^2.3.0",
@@ -38,6 +40,7 @@
     "passport": "^0.3.2",
     "passport-facebook": "^2.1.1",
     "passport-google-oauth20": "^1.0.0",
+    "passport-remember-me": "0.0.1",
     "request": "^2.79.0",
     "winston": "^2.3.0",
     "winston-mongodb": "^1.6.5"

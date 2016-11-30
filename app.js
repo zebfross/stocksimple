@@ -1,5 +1,6 @@
 var express = require('express')
 var session = require('express-session')
+var cookieParser = require('cookie-parser')
 var app = express()
 var request = require('request');
 var async = require('async');
@@ -11,7 +12,7 @@ var mustacheExpress = require('mustache-express');
 
 var cache = {}
 var expireCacheInMs = 24*60*60*1000
-var apiKey = "sWULk4ELh-ZE_RQDStSw"
+var apiKey = process.env.Quandl_Api_Key
 var baseUrlMetrics = "https://www.quandl.com/api/v3/datasets/SF0/" //AAPL_NETINC_MRY.json?api_key=
 var baseUrlPrices = "https://www.quandl.com/api/v3/datatables/WIKI/PRICES.json?" //ticker=<your_codes>&date=<your_date>&qopts.columns=<your_columns>
 //var metrics = ["NETINC","NETINCCMN","NETINCCMNUSD","SHARESWA","DPS"];
@@ -154,12 +155,14 @@ function requestPriceAndMetrics(ticker, cb) {
             var metrics = results[0];
             metrics.price = results[1];
             metrics.lastDateModified = new Date();
+            metrics.ticker = ticker
             cache[ticker] = metrics;
             cb(null, metrics);
         })
 }
 
 app.use(express.static(__dirname + '/public'));
+app.use(cookieParser());
 app.use(session({
     secret: 'Some Super Secret',
     resave: false,
@@ -167,13 +170,21 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(passport.authenticate('remember-me'))
 
 app.engine('mustache', mustacheExpress());
 app.set('view engine', 'mustache')
 app.set('views', './views')
 
 app.get('/', function (req, res) {
-    res.render('index.mustache', { user: req.user })
+    if (req.user && !req.cookies['remember_me']) {
+        Model.Token.issue(req.user, function (err, token) {
+            res.cookie('remember_me', token, { path: '/', httpOnly: true, maxAge: 1209600000 })
+            res.render('index.mustache', { user: req.user })
+        })
+    } else {
+        res.render('index.mustache', { user: req.user })
+    }
 })
 
 app.get('/auth/google',
@@ -206,7 +217,7 @@ app.get('/api/:ticker', function (req, res) {
                 logger.error("Server error for ticker " + tickerUpper, err)
                 return res.status(500).send(JSON.stringify({ "error": err }))
             }
-            var result = { "data": { "ticker": tickerUpper, "metrics": metrics } };
+            var result = { "data": metrics };
             res.send(JSON.stringify(result))
         });
     }

@@ -6,7 +6,7 @@ var config = require('../config/config')()
 
 var logger = new (winston.Logger)({
     transports: [
-        new (winstonMongodb)({ level: 'debug', db: config.db })
+        new (winstonMongodb)({ level: 'info', db: config.db })
     ],
     exceptionHandlers: [
         new (winston.transports.Console)({ json: false, timestamp: true })
@@ -14,5 +14,8 @@ var logger = new (winston.Logger)({
     exitOnError: false
 });
 
+if(config.consoleLog) {
+    logger.add(winston.transports.Console, {level: 'silly'})
+}
 
 module.exports = logger;

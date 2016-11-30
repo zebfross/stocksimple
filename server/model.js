@@ -1,6 +1,7 @@
 var config = require('../config/config')()
 var mongoose = require('mongoose')
 var logger = require('./logger')
+var hat = require('hat')
 
 mongoose.Promise = require('bluebird');
 mongoose.connect(config.db);
@@ -40,19 +41,71 @@ UserSchema.methods.addFavorite = function (fav) {
 }
 
 UserSchema.methods.removeFavorite = function (fav) {
-    var index = this.favorites.indexOf(fav)
-    if (index >= 0) {
-        this.favorites.splice(index, 1)
-        this.save(function (err, result) {
-            if (err) {
-                logger.error("removeFavorite error saving: " + JSON.stringify(err))
-            }
-        })
-    }
+    this.favorites.pull(fav)
+    this.save(function (err, result) {
+        if (err) {
+            logger.error("removeFavorite error saving: " + JSON.stringify(err))
+        }
+    })
 }
 
 var User = mongoose.model(config.db_prefix + 'User', UserSchema)
 
+var TokenSchema = mongoose.Schema({
+    token: String,
+    userId: String
+}, { strict: true })
+
+TokenSchema.static('consume', function (token, callback) {
+    logger.debug('token.consume finding token ' + token)
+    this.findOne({ token: token }, function (err, result) {
+        if (err || result == undefined) {
+            logger.error("token.consume", err)
+            callback(err, null)
+        } else {
+            logger.debug('token.consume finding user ' + JSON.stringify(result))
+            User.findOne({ id: result.userId }, function (err, user) {
+                callback(err, user)
+            })
+        }
+    })
+})
+
+TokenSchema.static('issue', function (user, done) {
+    var token = new Token({ token: hat(), userId: user.id })
+    token.save(function (err, result) {
+        if (err) { return done(err); }
+        return done(null, token.token);
+    });
+}, { strict: true })
+
+var Token = mongoose.model(config.db_prefix + 'Token', TokenSchema)
+
+var TickerSchema = mongoose.Schema({
+    ticker: String,
+    price: Number,
+    NETINC: Number,
+    SHARESWA: Number,
+    DPS: Number,
+    datePriceUpdated: Date,
+    dateFundamentalsUpdated: Date
+})
+
+TickerSchema.static('findByTicker', function (ticker, done) {
+    this.findOne({ ticker: ticker }, function (err, result) {
+        if (err || result == undefined) {
+            logger.error("ticker.findByTicker", { ticker: ticker })
+            done(null, null)
+        } else {
+            done(null, result)
+        }
+    })
+}, { stict: true })
+
+var Ticker = mongoose.model('Ticker', TickerSchema)
+
 module.exports = {
-    User: User
+    User: User,
+    Token: Token,
+    Ticker: Ticker
 }

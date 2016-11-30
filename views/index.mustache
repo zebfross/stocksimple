@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-    <title>Bootstrap 101 Template</title>
+    <title>StockSimple - Easy stock analysis</title>
 
     <!-- Bootstrap -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
@@ -30,7 +30,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#">{{title}}</a>
+                <a class="navbar-brand" href="#">StockSimple</a>
                 <form class="navbar-form navbar-left" id="formTickerSearch">
                     <div class="form-group form-horizontal">
                         <input id="tickerInput" type="text" name="ticker" class="form-control" placeholder="Ex. MSFT">
@@ -45,7 +45,7 @@
                 <ul class="nav navbar-nav">
                     <li class="">
                         <!-- ko if: isUserLoggedIn() -->
-                        <span>Welcome, <span data-bind="text: user().displayName"></span></span>
+                        <div>Welcome, <span data-bind="text: user().displayName"></span></div>
                         <!-- /ko -->
                         <!-- ko if: !isUserLoggedIn() -->
                         <a href="#" data-toggle="modal" data-target="#loginModal">
