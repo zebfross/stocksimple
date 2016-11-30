@@ -174,7 +174,7 @@ app.use(passport.authenticate('remember-me'))
 
 app.engine('mustache', mustacheExpress());
 app.set('view engine', 'mustache')
-app.set('views', './views')
+app.set('views', __dirname + '/views')
 
 app.get('/', function (req, res) {
     if (req.user && !req.cookies['remember_me']) {
