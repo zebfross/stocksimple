@@ -1,2 +1,3 @@
 node_modules
 config/auth_codes.txt
+/server/prices.csv

@@ -14,9 +14,34 @@ var http = require('http');
 var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
+function run_cmd(cmd, args, cb, end) {
+    var spawn = require('child_process').spawn,
+        child = spawn(cmd, args),
+        me = this;
+    child.stdout.on('data', function (buffer) { cb(me, buffer) });
+    child.stdout.on('end', end);
+	child.on('error', function() {})
+}
+
+try {
+run_cmd(
+    '%windir%\system32\inetsrv\appcmd', ['set', 'config', 'ssection:applicationPools', '-applicationPoolDefaults.recycling.periodicRestart.time:00:00:00'],
+    function (me, buffer) {  },
+    function () {  }
+);
+run_cmd(
+    '%windir%\system32\inetsrv\appcmd', ['set', 'config', 'ssection:applicationPools', '-applicationPoolDefaults.processModel.idleTimeout:00:00:00'],
+    function (me, buffer) {  },
+    function () {  }
+);
+} catch (Exception) {
+
+}
+
 /**
  * Create HTTP server.
  */
+
 
 var server = http.createServer(app);
 

@@ -7,9 +7,10 @@ mongoose.Promise = require('bluebird');
 mongoose.connect(config.db);
 
 var UserSchema = mongoose.Schema({
-    id: String,
+    id: { type: String, index: true },
     displayName: String,
     provider: String,
+    email: String,
     favorites: Array
 }, { strict: true })
 
@@ -52,7 +53,7 @@ UserSchema.methods.removeFavorite = function (fav) {
 var User = mongoose.model(config.db_prefix + 'User', UserSchema)
 
 var TokenSchema = mongoose.Schema({
-    token: String,
+    token: { type: String, index: true },
     userId: String
 }, { strict: true })
 
@@ -82,25 +83,36 @@ TokenSchema.static('issue', function (user, done) {
 var Token = mongoose.model(config.db_prefix + 'Token', TokenSchema)
 
 var TickerSchema = mongoose.Schema({
-    ticker: String,
+    ticker: { type: String, index: true },
     price: Number,
     NETINC: Number,
     SHARESWA: Number,
     DPS: Number,
     datePriceUpdated: Date,
     dateFundamentalsUpdated: Date
-})
+}, { stict: true })
 
 TickerSchema.static('findByTicker', function (ticker, done) {
     this.findOne({ ticker: ticker }, function (err, result) {
-        if (err || result == undefined) {
-            logger.error("ticker.findByTicker", { ticker: ticker })
-            done(null, null)
+        if (err) {
+            logger.error("ticker.findByTicker " + ticker, err)
+            done(err, null)
         } else {
             done(null, result)
         }
     })
-}, { stict: true })
+})
+
+TickerSchema.static('findByTickerLean', function (ticker, done) {
+    this.findOne({ ticker: ticker }).lean().exec(function (err, result) {
+        if (err) {
+            logger.error("ticker.findByTicker " + ticker, err)
+            done(err, null)
+        } else {
+            done(null, result)
+        }
+    })
+})
 
 var Ticker = mongoose.model('Ticker', TickerSchema)
 

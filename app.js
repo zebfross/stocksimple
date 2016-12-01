@@ -212,14 +212,24 @@ app.get('/api/:ticker', function (req, res) {
     } else {
         var tickerUpper = req.params.ticker.toUpperCase();
         logger.debug("Search for ticker " + tickerUpper)
-        requestPriceAndMetrics(tickerUpper, function (err, metrics) {
-            if (err) {
-                logger.error("Server error for ticker " + tickerUpper, err)
-                return res.status(500).send(JSON.stringify({ "error": err }))
+        Model.Ticker.findByTickerLean(tickerUpper, function (err, result) {
+            if (!result) {
+                requestPriceAndMetrics(tickerUpper, function (err, metrics) {
+                    if (err) {
+                        logger.error("Server error for ticker " + tickerUpper, err)
+                        return res.status(500).send(JSON.stringify({ "error": err }))
+                    }
+                    var newTicker = new Model.Ticker(metrics)
+                    newTicker.save()
+                    var data = { "data": metrics };
+                    res.send(JSON.stringify(data))
+                });
+            } else {
+                logger.debug("have " + tickerUpper + " in db", result)
+                var data = { "data": result };
+                res.send(JSON.stringify(data))
             }
-            var result = { "data": metrics };
-            res.send(JSON.stringify(result))
-        });
+        })
     }
 })
 

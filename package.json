@@ -30,6 +30,7 @@
     "async": "^2.1.4",
     "bluebird": "^3.4.6",
     "cookie-parser": "^1.4.3",
+    "csv": "^1.1.0",
     "express": "^4.14.0",
     "express-session": "^1.14.2",
     "hat": "0.0.3",
@@ -42,6 +43,7 @@
     "passport-google-oauth20": "^1.0.0",
     "passport-remember-me": "0.0.1",
     "request": "^2.79.0",
+    "unzip": "^0.1.11",
     "winston": "^2.3.0",
     "winston-mongodb": "^1.6.5"
   },

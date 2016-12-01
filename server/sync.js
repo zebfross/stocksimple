@@ -3,6 +3,9 @@ var async = require('async');
 var tickers = require('../tickers.json');
 var logger = require('./logger')
 var Model = require('./model')
+var fs = require('fs')
+var csv = require('csv')
+var unzip = require('unzip')
 
 var apiKey = process.env.Quandl_Api_Key
 var baseUrlMetrics = "https://www.quandl.com/api/v3/datasets/SF0/" //AAPL_NETINC_MRY.json?api_key=
@@ -10,20 +13,27 @@ var baseUrlPrices = "https://www.quandl.com/api/v3/datatables/WIKI/PRICES.json?"
 //var metrics = ["NETINC","NETINCCMN","NETINCCMNUSD","SHARESWA","DPS"];
 var _metrics = ["NETINC", "SHARESWA", "DPS"];
 
-var timeBetweenRetries = 400;
-var maxRetries = 3
+var timeBetweenRetries = 600;
+var maxRetries = 10
+
+function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+}
 
 function requestWithRetry(url, cb, retriesLeft) {
     if (retriesLeft == undefined)
         retriesLeft = maxRetries
+    if (retriesLeft <= 0)
+        return cb({ error: "Exceeded number of retries" }, null, null)
     request(url, function (error, response, body) {
         if (response.statusCode != 429) {
             cb(null, response, body)
         } else {
-            logger.warn("retrying in " + timeBetweenRetries)
+            var waitTime = randomInt(200, 800)
+            logger.debug("retrying in " + waitTime + " with " + retriesLeft + " retries left")
             setTimeout(function () {
                 requestWithRetry(url, cb, retriesLeft - 1)
-            }, timeBetweenRetries)
+            }, waitTime)
         }
     })
 }
@@ -35,10 +45,10 @@ function requestMetric(ticker, metric, cb) {
             var data = JSON.parse(body);
             cb(null, ticker, metric, data.dataset.data[0][1])
         } else {
-            logger.error(JSON.stringify(response))
+            logger.debug(JSON.stringify(response))
             cb(error, ticker, metric, null)
         }
-    })
+    }, maxRetries)
 }
 
 function pad(n, width, z) {
@@ -47,12 +57,17 @@ function pad(n, width, z) {
     return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
 }
 
-function getUrlForPriceRequest(ticker) {
+function getUrlForPriceRequest(ticker, asCsv) {
     var d = new Date();
     var day = pad(d.getDate(), 2);
     var month = pad(d.getMonth(), 2);
-    var url = baseUrlPrices + "ticker=" + ticker + "&date.gte=" + d.getFullYear() + "" + month + "" + day;
+    var url = baseUrlPrices + "date.gte=" + d.getFullYear() + "" + month + "" + day;
     url = url + "&qopts.columns=ticker,date,close&api_key=" + apiKey;
+    if (asCsv) {
+        url = url + "&qopts.export=true"
+    } else {
+        url = url + "&ticker=" + ticker
+    }
     return url;
 }
 
@@ -67,10 +82,10 @@ function requestPrice(ticker, cb) {
             else
                 cb(null, 0)
         } else {
-            logger.error(JSON.stringify(response))
+            logger.debug(JSON.stringify(response))
             cb(error, 0);
         }
-    })
+    }, maxRetries)
 }
 
 function requestAllMetrics(ticker, cb) {
@@ -84,7 +99,7 @@ function requestAllMetrics(ticker, cb) {
         },
         function (err) {
             if (err) {
-                logger.error("problem running code async")
+                logger.debug("problem running code async")
                 return cb(err)
             }
             return cb(null, metricValues)
@@ -115,41 +130,43 @@ function requestPriceAndMetrics(ticker, cb) {
             requestAllMetrics(ticker, function (err, metrics) {
                 callback(err, metrics);
             })
-        },
+        }/*,
         function (callback) {
             requestPrice(ticker, function (err, price) {
                 callback(err, price)
             })
-        }],
+        }*/],
         function (err, results) {
             if (err) {
                 return cb(err, null)
             }
             var metrics = results[0];
-            metrics.price = results[1];
+            //metrics.price = results[1];
             metrics.lastDateModified = new Date();
+            metrics.ticker = ticker
             cb(null, metrics);
         })
 }
 
 function storeMetrics(ticker, metrics, done) {
+    logger.debug("storing " + ticker, metrics)
     Model.Ticker.findByTicker(ticker, function (err, result) {
-        var tickerObj = { ticker: ticker }
+        var tickerObj = { ticker: ticker/*, price: metrics.price */}
         if (!err && result) {
             tickerObj = result
-            for (var metric in _metrics) {
+            /*tickerObj.price = metrics.price*/
+            for (var i = 0; i < _metrics.length; ++i) {
+                var metric = _metrics[i]
                 if (metrics[metric])
                     tickerObj[metric] = metrics[metric]
             }
-            logger.debug("storeMetrics", metrics)
         } else {
-            var temp = { ticker: ticker }
-            for (var metric in _metrics) {
+            tickerObj = new Model.Ticker(tickerObj)
+            for (var i = 0; i < _metrics.length; ++i) {
+                var metric = _metrics[i]
                 if (metrics[metric])
-                    temp[metric] = metrics[metric]
+                    tickerObj[metric] = metrics[metric]
             }
-            logger.debug("storeMetrics", temp)
-            tickerObj = new Model.Ticker(temp)
         }
 
         tickerObj.dateFundamentalsUpdated = new Date()
@@ -157,7 +174,7 @@ function storeMetrics(ticker, metrics, done) {
         
         tickerObj.save(function (err, result) {
             if (err || !result)
-                logger.error("error storing ticker", tickerObj)
+                logger.debug("error storing ticker", tickerObj)
             done()
         })
     })
@@ -166,42 +183,98 @@ function storeMetrics(ticker, metrics, done) {
 function retrieveTickerBlock(start, blocksize, max) {
     var tasks = []
     var next = start
-    if (next < tickers.length && next < start + blocksize && next <= start + max) {
-        var ticker_1 = tickers[next].Ticker
+    if (next < tickers.length && next < start + blocksize && next < max) {
         tasks.push(function (callback) {
-            requestPriceAndMetrics(ticker_1, function (err, metrics) {
+            logger.debug("processing " + start)
+            requestPriceAndMetrics(tickers[start].Ticker, function (err, metrics) {
                 storeMetrics(metrics.ticker, metrics, function () {
                     callback(null, 0)
                 })
             })
         })
-    }
-    next += 1
-    if (next < tickers.length && next < start + blocksize && next <= start + max) {
-        var ticker_2 = tickers[next].Ticker
         tasks.push(function (callback) {
-            requestPriceAndMetrics(ticker_2, function (err, metrics) {
+            logger.debug("processing " + (start+1))
+            requestPriceAndMetrics(tickers[start + 1].Ticker, function (err, metrics) {
                 storeMetrics(metrics.ticker, metrics, function () {
                     callback(null, 0)
                 })
             })
         })
-    }
-    next += 1
-    if (next < tickers.length && next < start + blocksize && next <= start + max) {
-        var ticker_3 = tickers[next].Ticker
         tasks.push(function (callback) {
-            requestPriceAndMetrics(ticker_3, function (err, metrics) {
+            logger.debug("processing " + (start + 3))
+            requestPriceAndMetrics(tickers[start + 3].Ticker, function (err, metrics) {
                 storeMetrics(metrics.ticker, metrics, function () {
                     callback(null, 0)
                 })
             })
         })
+        async.parallel(tasks, function (err, results) {
+            if (start + blocksize < max)
+                retrieveTickerBlock(start + blocksize, blocksize, max)
+        })
+    } else {
+        logger.debug("all done at " + start)
     }
-    async.parallel(tasks, function (err, results) {
-        if (start + blocksize < max)
-            retrieveTickerBlock(start + blocksize, blocksize, max - blocksize)
-    })
 }
 
-retrieveTickerBlock(0, 3, 10)
+//retrieveTickerBlock(876, 3, 2500)
+
+
+
+function requestAllPrices() {
+    var url = getUrlForPriceRequest(null, true);
+    requestWithRetry(url, function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+            var json = JSON.parse(body)
+            var zipfile = json.datatable_bulk_download.file.link
+            logger.debug("zipfile: " + zipfile)
+            request(zipfile)
+                .pipe(unzip.Parse())
+                .on('entry', function (entry) {
+                    var fileName = entry.path;
+
+                    logger.debug("unzipped file " + fileName)
+                    var type = entry.type; // 'Directory' or 'File'
+                    var size = entry.size;
+                    entry.pipe(fs.createWriteStream(__dirname + '/prices.csv'));
+                      
+                });
+        } else {
+            logger.debug("error getting all prices", response)
+        }
+    }, maxRetries)
+}
+
+function updateAllPrices() {
+    var tickersSeen = {}
+    var results = fs.readFile(__dirname + "/prices.csv", 'utf-8', function (err, data) {
+        csv.parse(data, function (err, data) {
+           for (var i = data.length-1; i > 0; i--) {
+                var ticker = data[i][0]
+                var price = data[i][2]
+                if (price > 0 && !tickersSeen[ticker]) {
+                    
+                    tickersSeen[ticker] = true
+                    Model.Ticker.update({ ticker: ticker }, { price: price }, function (err, numAffected) {
+                        logger.debug("rows affected: " + JSON.stringify(numAffected))
+                    })
+                }
+            }
+        });
+    })
+    // read prices.csv
+    // for each ticker in prices
+    //   Model.Ticker.update({ticker: ticker}, {price: price}, function(err, numAffected) {
+
+    //   })
+}
+
+//requestAllPrices()
+
+//updateAllPrices()
+
+Model.Ticker.update({ ticker: "AAPL" }, { price: 111.18 }, function (err, numAffected) {
+    logger.debug("rows affected: " + JSON.stringify(numAffected))
+})
+
+//logger.debug(getUrlForPriceRequest(null, true))
