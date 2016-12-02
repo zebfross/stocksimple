@@ -272,9 +272,24 @@ function updateAllPrices() {
 //requestAllPrices()
 
 //updateAllPrices()
+var total = 0
+var totalFound = 0
 
-Model.Ticker.update({ ticker: "AAPL" }, { price: 111.18 }, function (err, numAffected) {
-    logger.debug("rows affected: " + JSON.stringify(numAffected))
-})
+function fillTicker(err, i, callback) {
+    Model.Ticker.findByTicker(tickers[i].Ticker, function (err, found) {
+        if (!found) {
+            logger.debug("missing " + tickers[i].Ticker)
+            requestPriceAndMetrics(tickers[i].Ticker, function (err, metrics) {
+                storeMetrics(metrics.ticker, metrics, function () {
+                    callback(null, i++, fillTicker)
+                })
+            })
+        } else {
+            callback(null, i++, fillTicker)
+        }
+    })
+}
+
+fillTicker(null, 0, fillTicker)
 
 //logger.debug(getUrlForPriceRequest(null, true))

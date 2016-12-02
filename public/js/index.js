@@ -171,11 +171,11 @@ function StockViewModel(parent, _ko) {
     this.price = ko.computed(function () {
         return this.customPricePerShare() * this.numShares();
     }, this);
-    this.monthlyCashFlow = ko.computed(function () {
-        return this.netIncome() / 12;
-    }, this);
     this.totalIncome = ko.computed(function () {
         return this.netIncome() + this.totalDividend();
+    }, this);
+    this.monthlyCashFlow = ko.computed(function () {
+        return this.totalIncome() / 12;
     }, this);
     this.roi = ko.computed(function () {
         if (this.price() != 0) {
@@ -203,9 +203,20 @@ function StockViewModel(parent, _ko) {
     };
 }
 
+var layouts = {
+    tiles: "tiles",
+    rows: "rows"
+};
+
 var StockListViewModel = function (_ko) {
     if (ko == undefined)
         ko = _ko;
+    this.layout = ko.observable(layouts.tiles);
+    this.tileLayout = ko.computed(function () {
+        if (this.layout() == layouts.tiles)
+            return true;
+        return false;
+    }, this);
     this.user = ko.observable(null);
     this.user.subscribe(function (newVal) {
         if (newVal && newVal.favorites) {

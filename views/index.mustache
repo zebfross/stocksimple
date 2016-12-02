@@ -38,6 +38,14 @@
                     </div>
                     <img id="loadingSpinner" height="25px" width="25px" src="images/loading_spinner.gif" style="display:none;" />
                 </form>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-default" data-bind="css: {active: tileLayout()}, click: function() {layout('tiles');}">
+                        <i class="glyphicon glyphicon-th"></i>
+                    </button>
+                    <button type="button" class="btn btn-default" data-bind="css: {active: !tileLayout()}, click: function() {layout('rows');}">
+                        <i class="glyphicon glyphicon-th-list"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Collect the nav links, forms, and other content for toggling -->
@@ -70,15 +78,33 @@
                 <span class="content">Try searching for a ticker.</span>
             </div>
             <!-- /ko -->
-            <!-- ko if: searchResult() != null, afterRender: initSlider -->
-            <div class="col-md-4" data-bind="template: { name: 'stock-template', data: searchResult(), afterRender: initSlider }">
+            <!-- ko if: tileLayout() -->
+                <!-- ko if: searchResult() != null, afterRender: initSlider -->
+                <div class="col-md-4" data-bind="template: { name: 'stock-template-tile', data: searchResult(), afterRender: initSlider }">
 
-            </div>
+                </div>
+                <!-- /ko -->
+                <!-- ko foreach: stocks -->
+                <div class="col-md-4" data-bind="template: { name: 'stock-template-tile', data: $data, afterRender: initSlider }">
+
+                </div>
+                <!-- /ko -->
             <!-- /ko -->
-            <!-- ko foreach: stocks -->
-            <div class="col-md-4" data-bind="template: { name: 'stock-template', data: $data, afterRender: initSlider }">
+            <!-- ko if: !tileLayout() -->
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Ticker</th><th>Price/Share</th><th>Total Price</th><th>N/I</th><th>Div.</th><th>ROI</th><th>Cash Flow</th>
+                        </tr>
+                    </thead>
+                    <tbody>                        
+                        <!-- ko foreach: stocks -->
+                        <tr data-bind="template: { name: 'stock-template-row', data: $data }">
 
-            </div>
+                        </tr>
+                        <!-- /ko -->
+                    </tbody>
+                </table>
             <!-- /ko -->
         </div>
 
@@ -107,7 +133,7 @@
             </div>
         </div>
     </div>
-    <script type="text/html" id="stock-template">
+    <script type="text/html" id="stock-template-tile">
         <div class="panel panel-default">
             <div class="panel-body">
                 <table class="table">
@@ -168,6 +194,21 @@
                 </table>
             </div>
         </div>
+    </script>
+    <script type="text/html" id="stock-template-row">
+        <td><label data-bind="text: ticker"></label></td>
+        <td>
+            <span data-bind="text: formatCurrency(pricePerShare(), true)"></span>
+            <!-- ko if: pricePerShare() != customPricePerShare() -->
+            / <span class="custom-price" data-bind="text: formatCurrency(customPricePerShare(), true)"></span>
+            <span role="button" class="glyphicon glyphicon-repeat" data-bind="click: resetPricePerShare"></span>
+            <!-- /ko -->
+        </td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
     </script>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
